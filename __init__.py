@@ -36,7 +36,9 @@ def SetupModifier(object):
                 modifier.show_viewport = True
                 modifier.show_render = True
                 modifier["Socket_11"] = True
-        elif modifier.type == 'DECIMATE':
+            else:
+                object.modifiers.remove(modifier)
+        else:
             object.modifiers.remove(modifier)
 
 def RockPainterLodder():
@@ -47,12 +49,17 @@ def RockPainterLodder():
 
     objectsWithRockpainter = []
     for obj in activeCollection.objects:
+        rockPaintersOnObjectFound = 0
         for modifier in obj.modifiers:
             if modifier.type == 'NODES' and modifier.node_group:
                 if modifier.node_group.name == "RockPainter_V2":
-                    objectsWithRockpainter.append(obj)
-                    modifier.show_viewport = False
-                    modifier.show_render = False
+                    if rockPaintersOnObjectFound > 0:
+                        obj.modifiers.remove(modifier)
+                    else:
+                        objectsWithRockpainter.append(obj)
+                        modifier.show_viewport = False
+                        modifier.show_render = False
+                        rockPaintersOnObjectFound += 1
 
     paintedRocksCollection = bpy.data.collections.get(rockCollectionName)
     if paintedRocksCollection:
@@ -63,14 +70,19 @@ def RockPainterLodder():
     for obj in objectsWithRockpainter:
         dupeLod0 = DupeObject(obj)
         dupeLod1 = DupeObject(obj)
-        dupeLod0.name = f"Rock_{rockIndex}_LOD0"
-        dupeLod1.name = f"Rock_{rockIndex}_LOD1"
+        dupeLod0.name = f"Rock_{rockIndex}-V_LOD0"
+        dupeLod1.name = f"Rock_{rockIndex}-V_LOD1"
         MoveToCollection(dupeLod0, rockCollectionName)
         MoveToCollection(dupeLod1, rockCollectionName)
         SetupModifier(dupeLod0)
         SetupModifier(dupeLod1)
         decimator = dupeLod1.modifiers.new(name="RockLod1Decimate", type='DECIMATE')
         decimator.ratio = 0.1
+
+        # Blender addon development is about happening to know the very specific ways to do something very simple. Thanks ChatGPT
+        # for _ in range(len(dupeLod1.modifiers) - 1):
+        #     bpy.ops.object.modifier_move_down({"object": dupeLod1}, modifier=decimator.name)
+
         rockIndex += 1
 
 # ----------------- Operator & Panel -----------------
